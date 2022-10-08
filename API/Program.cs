@@ -13,6 +13,8 @@ builder.Services.AddCors(p => p.AddPolicy("corspolicy", build =>
 
 var app = builder.Build();
 
+app.UseCors("corspolicy");
+
 // Configure the HTTP request pipeline.
 
 app.UseAuthorization();
