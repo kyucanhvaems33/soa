@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Data;
 using Newtonsoft.Json;
 using Task = API.Models.Task;
+using Microsoft.Maui.Graphics;
 
 namespace API.Controllers
 {
@@ -101,6 +102,7 @@ namespace API.Controllers
                     await file.CopyToAsync(memoryStream);
                     try
                     {
+                        
                         var img = Image.FromStream(memoryStream);
                         var byteImg = ImageToByteArray(img);
                         NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
