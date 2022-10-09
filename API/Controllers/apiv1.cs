@@ -103,8 +103,8 @@ namespace API.Controllers
                     try
                     {
                         
-                        var img = Image.FromStream(memoryStream);
-                        var byteImg = ImageToByteArray(img);
+                        //var img = Image.FromStream(memoryStream);
+                        var byteImg = memoryStream.ToArray();
                         NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
                         NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE users SET avatar = @img WHERE id = '{id}'", con);
                         NpgsqlParameter parameter = new NpgsqlParameter("@img", NpgsqlTypes.NpgsqlDbType.Bytea);
@@ -157,14 +157,14 @@ namespace API.Controllers
             }
         }
 
-        public byte[] ImageToByteArray(Image imageIn)
-        {
-            using (var ms = new MemoryStream())
-            {
-                imageIn.Save(ms, imageIn.RawFormat);
-                return ms.ToArray();
-            }
-        }
+        //public byte[] ImageToByteArray(Image imageIn)
+        //{
+        //    using (var ms = new MemoryStream())
+        //    {
+        //        imageIn.Save(ms, imageIn.RawFormat);
+        //        return ms.ToArray();
+        //    }
+        //}
         #endregion
 
         #region API task
