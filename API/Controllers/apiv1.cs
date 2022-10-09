@@ -115,15 +115,15 @@ namespace API.Controllers
                             con.Close();
                             return Ok(new { id = id });
                         }
-                        catch
+                        catch(Exception ex)
                         {
-                            return BadRequest(new {status = false});
+                            return BadRequest(ex.ToString());
                         }
 
                     }
-                    catch
+                    catch(Exception ex)
                     {
-                        return BadRequest(new { status = false });
+                        return BadRequest(ex.ToString());
                     }
                 }
             }
