@@ -151,7 +151,7 @@ namespace API.Controllers
             }
             catch(Exception err)
             {
-                return BadRequest(new { status = false });
+                return BadRequest(err);
             }
         }
 
