@@ -85,8 +85,8 @@ namespace API.Controllers
 
         #region API avatar
 
-        // POST avatar
-        [HttpPost]
+        // Put avatar
+        [HttpPut]
         [Route("avatar/{id}")]
         public async Task<IActionResult> UploadAvatar([FromRoute] Guid id,IFormFile file)
         {
