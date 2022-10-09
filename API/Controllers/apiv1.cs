@@ -151,7 +151,7 @@ namespace API.Controllers
             }
             catch(Exception err)
             {
-                return BadRequest(err);
+                return BadRequest(err.ToString());
             }
         }
 
