@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using Npgsql;
-using BCrypt;
+using BCrypt.Net;
 using System.Drawing;
 using System.Data;
 using Newtonsoft.Json;
@@ -61,21 +61,27 @@ namespace API.Controllers
         public IActionResult login(loginUser user)
         {
             NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
-            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT password FROM users WHERE email = '{user.email}'", con);
+            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,password FROM users WHERE email = '{user.email}'", con);
             con.Open();
             try
             {
                 string hashPassword;
-                var pass = cmd.ExecuteScalar();
-                if (pass != null)
+                Guid id;
+                NpgsqlDataReader reader = cmd.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    hashPassword = pass.ToString();
+                    reader.Read();
+                    id = reader.GetGuid(0);
+                    hashPassword = reader.GetString(1);
+                    con.Close();
+                    bool verify = BCrypt.Net.BCrypt.Verify(user.password, hashPassword);
+                    if (verify) return Ok(new { status = true ,id = id});
+                    else return Unauthorized(new { status = false });
                 }
-                else return Unauthorized(new {status = "Tài khoản hoặc mật khẩu sai!" });
-                con.Close();
-                bool verify = BCrypt.Net.BCrypt.Verify(user.password, hashPassword);
-                if (verify) return Ok(new {status = true});
-                else return Unauthorized(new { status = false });
+                else
+                {
+                    return Unauthorized(new { status = false });
+                }
             }catch
             {
                 return Unauthorized(new { status = false });
@@ -119,13 +125,13 @@ namespace API.Controllers
                         }
                         catch(Exception ex)
                         {
-                            return BadRequest(ex.ToString());
+                            return BadRequest(new { status = false });
                         }
 
                     }
                     catch(Exception ex)
                     {
-                        return BadRequest(ex.ToString());
+                        return BadRequest(new { status = false });
                     }
                 }
             }
@@ -153,7 +159,7 @@ namespace API.Controllers
             }
             catch(Exception err)
             {
-                return BadRequest(err.ToString());
+                return BadRequest(new { status = false });
             }
         }
 
@@ -174,12 +180,19 @@ namespace API.Controllers
         [Route("task/{id}")]
         public IActionResult postTask([FromRoute] Guid id, postTask task)
         {
-            NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
-            NpgsqlCommand cmd = new NpgsqlCommand($"INSERT INTO tasks(user_id,task) VALUES('{id}','{task.task}') RETURNING id", con);
-            con.Open();
-            string taskID = cmd.ExecuteScalar().ToString();
-            con.Close();
-            return new JsonResult(new { id = taskID }) { StatusCode = StatusCodes.Status200OK };
+            try
+            {
+                NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
+                NpgsqlCommand cmd = new NpgsqlCommand($"INSERT INTO tasks(user_id,task) VALUES('{id}','{task.task}') RETURNING id", con);
+                con.Open();
+                string taskID = cmd.ExecuteScalar().ToString();
+                con.Close();
+                return new JsonResult(new { id = taskID }) { StatusCode = StatusCodes.Status200OK };
+            }
+            catch
+            {
+                return BadRequest(new { status = false });
+            }
         }
 
         //GET all task by userID
@@ -188,7 +201,7 @@ namespace API.Controllers
         public IActionResult getAllTaskByUserID([FromRoute] Guid id)
         {
             NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
-            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,task,status,created_at,path_file FROM tasks WHERE user_id = '{id}'", con);
+            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,task,status,created_at,path_file,finished_at FROM tasks WHERE user_id = '{id}'", con);
             DataTable table = new DataTable();
             con.Open();
             NpgsqlDataReader reader = cmd.ExecuteReader();
@@ -202,7 +215,7 @@ namespace API.Controllers
             }
             else
             {
-                return BadRequest(new { status = false });
+                return Ok();
             }
         }
 
@@ -314,7 +327,6 @@ namespace API.Controllers
             string path = cmd.ExecuteScalar().ToString();
             FileInfo file = new FileInfo(path);
             return File(System.IO.File.ReadAllBytes(path), "application/octet-stream", "file" + file.Extension);
-
         }
         #endregion 
     }
