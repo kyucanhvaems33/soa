@@ -391,10 +391,11 @@ namespace API.Controllers
             NpgsqlCommand cmd = new NpgsqlCommand($"SELECT path_file FROM tasks WHERE id = '{id}'", con);
             con.Open();
             string path = cmd.ExecuteScalar().ToString();
+            con.Close();
             FileInfo file = new FileInfo(path);
             return File(System.IO.File.ReadAllBytes(path), "application/octet-stream", "file" + file.Extension);
         }
-        #endregion 
+        #endregion
 
 
     }
