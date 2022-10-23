@@ -13,6 +13,7 @@ using System.Text;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
+using System.Threading.Tasks;
 
 namespace API.Controllers
 {
@@ -389,6 +390,21 @@ namespace API.Controllers
             {
                 return BadRequest(new { status = false });
             }
+        }
+
+
+        //DELETE TASK by taskID
+        [Authorize]
+        [HttpDelete]
+        [Route("task/{id}")]
+        public IActionResult deleteTaskByTaskID([FromRoute] Guid id)
+        {
+            NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
+            NpgsqlCommand cmd = new NpgsqlCommand($"DELETE FROM tasks WHERE id = '{id}'", con);
+            con.Open();
+            cmd.ExecuteNonQuery();
+            con.Close();
+            return Ok(new { status = true });
         }
 
 
