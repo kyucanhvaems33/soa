@@ -8,7 +8,11 @@ using System.Drawing;
 using System.Data;
 using Newtonsoft.Json;
 using Task = API.Models.Task;
-using Microsoft.Maui.Graphics;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API.Controllers
 {
@@ -61,11 +65,11 @@ namespace API.Controllers
         public IActionResult login(loginUser user)
         {
             NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
-            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,password FROM users WHERE email = '{user.email}'", con);
+            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,password,name,dob FROM users WHERE email = '{user.email}'", con);
             con.Open();
             try
             {
-                string hashPassword;
+                string hashPassword,name,dob;
                 Guid id;
                 NpgsqlDataReader reader = cmd.ExecuteReader();
                 if (reader.HasRows)
@@ -73,9 +77,16 @@ namespace API.Controllers
                     reader.Read();
                     id = reader.GetGuid(0);
                     hashPassword = reader.GetString(1);
+                    name = reader.GetString(2);
+                    dob = reader.GetString(3);
+                    //dob = reader.GetDateTime(3).ToString();
                     con.Close();
                     bool verify = BCrypt.Net.BCrypt.Verify(user.password, hashPassword);
-                    if (verify) return Ok(new { status = true ,id = id});
+                    if (verify)
+                    {
+                        var token = generateToken(user.email);
+                        return Ok(new { status = true, id = id , token = token, name= name, dob = dob});
+                    }
                     else return Unauthorized(new { status = false });
                 }
                 else
@@ -90,9 +101,33 @@ namespace API.Controllers
 
         #endregion
 
+        private string generateToken(string email)
+        {
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:secretKey"]));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            var claims = new[]{
+                new Claim(JwtRegisteredClaimNames.Sub, email)
+            };
+
+            var token = new JwtSecurityToken(
+                //issuer: "sample",
+                //audience: "sample",
+                claims:claims,
+                expires: DateTime.Now.AddMinutes(120),
+                signingCredentials: credentials
+                );
+
+            var encodeToken = new JwtSecurityTokenHandler().WriteToken(token);
+            return encodeToken;
+
+        }
+
+
+
         #region API avatar
 
         // Put avatar
+        [Authorize]
         [HttpPut]
         [Route("avatar/{id}")]
         public async Task<IActionResult> UploadAvatar([FromRoute] Guid id,IFormFile file)
@@ -139,6 +174,7 @@ namespace API.Controllers
 
 
         //GET avatar
+        [Authorize]
         [HttpGet]
         [Route("avatar/{id}")]
         public IActionResult getAvatar([FromRoute] Guid id)
@@ -176,6 +212,7 @@ namespace API.Controllers
         #region API task
 
         //POST task by userID
+        [Authorize]
         [HttpPost]
         [Route("task/{id}")]
         public IActionResult postTask([FromRoute] Guid id, postTask task)
@@ -196,12 +233,13 @@ namespace API.Controllers
         }
 
         //GET all task by userID
+        [Authorize]
         [HttpGet]
-        [Route("task/{id}")]
+        [Route("tasks/{id}")]
         public IActionResult getAllTaskByUserID([FromRoute] Guid id)
         {
             NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
-            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,task,status,created_at,path_file,finished_at FROM tasks WHERE user_id = '{id}'", con);
+            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,task,status,created_at,path_file,finished_at FROM tasks WHERE user_id = '{id}' ORDER BY (case when status then 0 else 1 end) desc, created_at desc", con);
             DataTable table = new DataTable();
             con.Open();
             NpgsqlDataReader reader = cmd.ExecuteReader();
@@ -219,7 +257,33 @@ namespace API.Controllers
             }
         }
 
+        //SEARCH task by taskName
+        [Authorize]
+        [HttpGet]
+        [Route("task/{id}")]
+        public IActionResult getTaskByUserID([FromRoute] Guid id,postTask task)
+        {
+            NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
+            NpgsqlCommand cmd = new NpgsqlCommand($"SELECT id,task,status,created_at,path_file,finished_at FROM tasks WHERE user_id = '{id}' AND task iLIKE '{task.task}%' ORDER BY (case when status then 0 else 1 end) desc, created_at desc", con);
+            DataTable table = new DataTable();
+            con.Open();
+            NpgsqlDataReader reader = cmd.ExecuteReader();
+            if (reader.HasRows)
+            {
+                table.Load(reader);
+                reader.Close();
+                con.Close();
+                string json = JsonConvert.SerializeObject(table);
+                return Ok(json);
+            }
+            else
+            {
+                return Ok();
+            }
+        }
+
         //PUT task by taskID
+        [Authorize]
         [HttpPut]
         [Route("task/{id}")]
         public IActionResult putTaskByTaskID([FromRoute] Guid id, Task task)
@@ -251,7 +315,7 @@ namespace API.Controllers
                     if (task.path_file == "")
                     {
                         con.Open();
-                        NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now() WHERE id = '{id}'", con);
+                        NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(), finished_at = null WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
                         return Ok(new { status = true });
@@ -259,7 +323,7 @@ namespace API.Controllers
                     else
                     {
                         con.Open();
-                        NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(),path_file = '{task.path_file}' WHERE id = '{id}'", con);
+                        NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(), finished_at = null, path_file = '{task.path_file}' WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
                         return Ok(new { status = true });
@@ -277,6 +341,7 @@ namespace API.Controllers
         #endregion
 
         #region API upload file
+        [Authorize]
         [HttpPost]
         [Route("task/file/{id}")]
         public IActionResult uploadFile(IFormFile file, [FromRoute] Guid id)
@@ -317,6 +382,7 @@ namespace API.Controllers
         }
 
         // GET file upload
+        [Authorize]
         [HttpGet]
         [Route("task/file/{id}")]
         public IActionResult getFile([FromRoute] Guid id)
