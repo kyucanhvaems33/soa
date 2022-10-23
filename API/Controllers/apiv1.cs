@@ -47,6 +47,7 @@ namespace API.Controllers
                con.Open();
                string res = cmd.ExecuteScalar().ToString();
                con.Close();
+               NpgsqlConnection.ClearAllPools();
                var result = new { id = res };
                return Ok(result);
             }
@@ -81,6 +82,7 @@ namespace API.Controllers
                     dob = reader.GetString(3);
                     //dob = reader.GetDateTime(3).ToString();
                     con.Close();
+                    NpgsqlConnection.ClearAllPools();
                     bool verify = BCrypt.Net.BCrypt.Verify(user.password, hashPassword);
                     if (verify)
                     {
@@ -156,6 +158,7 @@ namespace API.Controllers
                         {
                             cmd.ExecuteNonQuery();
                             con.Close();
+                            NpgsqlConnection.ClearAllPools();
                             return Ok(new { id = id });
                         }
                         catch(Exception ex)
@@ -224,6 +227,7 @@ namespace API.Controllers
                 con.Open();
                 string taskID = cmd.ExecuteScalar().ToString();
                 con.Close();
+                NpgsqlConnection.ClearAllPools();
                 return new JsonResult(new { id = taskID }) { StatusCode = StatusCodes.Status200OK };
             }
             catch
@@ -248,6 +252,7 @@ namespace API.Controllers
                 table.Load(reader);
                 reader.Close();
                 con.Close();
+                NpgsqlConnection.ClearAllPools();
                 string json = JsonConvert.SerializeObject(table);
                 return Ok(json);
             }
@@ -273,6 +278,7 @@ namespace API.Controllers
                 table.Load(reader);
                 reader.Close();
                 con.Close();
+                NpgsqlConnection.ClearAllPools();
                 string json = JsonConvert.SerializeObject(table);
                 return Ok(json);
             }
@@ -299,6 +305,7 @@ namespace API.Controllers
                         NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(),finished_at = now() WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
+                        NpgsqlConnection.ClearAllPools();
                         return Ok(new { status = true });
                     }
                     else
@@ -307,6 +314,7 @@ namespace API.Controllers
                         NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(),finished_at = now(),path_file = '{task.path_file}' WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
+                        NpgsqlConnection.ClearAllPools();
                         return Ok(new { status = true });
                     }
                 }
@@ -318,6 +326,7 @@ namespace API.Controllers
                         NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(), finished_at = null WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
+                        NpgsqlConnection.ClearAllPools();
                         return Ok(new { status = true });
                     }
                     else
@@ -326,6 +335,7 @@ namespace API.Controllers
                         NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(), finished_at = null, path_file = '{task.path_file}' WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
+                        NpgsqlConnection.ClearAllPools();
                         return Ok(new { status = true });
                     }
                 }
@@ -360,6 +370,7 @@ namespace API.Controllers
                 con.Open();
                 cmd.ExecuteNonQuery();
                 con.Close();
+                NpgsqlConnection.ClearAllPools();
                 return Ok(new { status = true});
             }
             else
@@ -377,6 +388,7 @@ namespace API.Controllers
                 con.Open();
                 cmd.ExecuteNonQuery();
                 con.Close();
+                NpgsqlConnection.ClearAllPools();
                 return Ok(new { status = true });
             }
         }
@@ -392,6 +404,7 @@ namespace API.Controllers
             con.Open();
             string path = cmd.ExecuteScalar().ToString();
             con.Close();
+            NpgsqlConnection.ClearAllPools();
             FileInfo file = new FileInfo(path);
             return File(System.IO.File.ReadAllBytes(path), "application/octet-stream", "file" + file.Extension);
         }
