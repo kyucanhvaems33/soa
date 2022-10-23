@@ -132,7 +132,7 @@ namespace API.Controllers
         [Authorize]
         [HttpPut]
         [Route("avatar/{id}")]
-        public async Task<IActionResult> UploadAvatar([FromRoute] Guid id,IFormFile file)
+        public async Task<IActionResult> UpdateAvatar([FromRoute] Guid id,IFormFile file)
         {
             if (file == null || file.Length == 0)
             {
@@ -168,6 +168,51 @@ namespace API.Controllers
 
                     }
                     catch(Exception ex)
+                    {
+                        return BadRequest(new { status = false });
+                    }
+                }
+            }
+        }
+
+        [HttpPost]
+        [Route("avatar/{id}")]
+        public async Task<IActionResult> UploadAvatar([FromRoute] Guid id, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest();
+            }
+            else
+            {
+                using (var memoryStream = new MemoryStream())
+                {
+                    await file.CopyToAsync(memoryStream);
+                    try
+                    {
+
+                        //var img = Image.FromStream(memoryStream);
+                        var byteImg = memoryStream.ToArray();
+                        NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
+                        NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE users SET avatar = @img WHERE id = '{id}'", con);
+                        NpgsqlParameter parameter = new NpgsqlParameter("@img", NpgsqlTypes.NpgsqlDbType.Bytea);
+                        parameter.Value = byteImg;
+                        cmd.Parameters.Add(parameter);
+                        con.Open();
+                        try
+                        {
+                            cmd.ExecuteNonQuery();
+                            con.Close();
+                            NpgsqlConnection.ClearAllPools();
+                            return Ok(new { id = id });
+                        }
+                        catch (Exception ex)
+                        {
+                            return BadRequest(new { status = false });
+                        }
+
+                    }
+                    catch (Exception ex)
                     {
                         return BadRequest(new { status = false });
                     }
