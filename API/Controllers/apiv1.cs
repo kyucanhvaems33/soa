@@ -59,6 +59,28 @@ namespace API.Controllers
             }
         }
 
+        //PUT user
+        [Authorize]
+        [Route("user/{id}")]
+        [HttpPut]
+        public IActionResult updateUser([FromRoute] Guid id, putUser user)
+        {
+            NpgsqlConnection con = new NpgsqlConnection(_config.GetConnectionString("todolist").ToString());
+            NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE users SET name = '{user.name}',dob = '{user.dob}', updated_at = now() WHERE id = '{id}' RETURNING id", con);
+            try
+            {
+                con.Open();
+                string res = cmd.ExecuteNonQuery().ToString();
+                con.Close();
+                return Ok(new { id = id });
+
+            }
+            catch
+            {
+                return BadRequest(new { status = false });
+            }
+        }
+
         #endregion
 
         #region LOGIN API
@@ -176,6 +198,8 @@ namespace API.Controllers
             }
         }
 
+
+        //POST avatar
         [HttpPost]
         [Route("avatar/{id}")]
         public async Task<IActionResult> UploadAvatar([FromRoute] Guid id, IFormFile file)
