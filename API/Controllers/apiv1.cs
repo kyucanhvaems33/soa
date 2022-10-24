@@ -369,45 +369,23 @@ namespace API.Controllers
             {
                 if (task.status)
                 {
-                    if (task.path_file == "")
-                    {
                         con.Open();
                         NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(),finished_at = now() WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
                         NpgsqlConnection.ClearAllPools();
                         return Ok(new { status = true });
-                    }
-                    else
-                    {
-                        con.Open();
-                        NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(),finished_at = now(),path_file = '{task.path_file}' WHERE id = '{id}'", con);
-                        cmd.ExecuteNonQuery();
-                        con.Close();
-                        NpgsqlConnection.ClearAllPools();
-                        return Ok(new { status = true });
-                    }
+                    
                 }
                 else
                 {
-                    if (task.path_file == "")
-                    {
                         con.Open();
                         NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(), finished_at = null WHERE id = '{id}'", con);
                         cmd.ExecuteNonQuery();
                         con.Close();
                         NpgsqlConnection.ClearAllPools();
                         return Ok(new { status = true });
-                    }
-                    else
-                    {
-                        con.Open();
-                        NpgsqlCommand cmd = new NpgsqlCommand($"UPDATE tasks SET task = '{task.task}',status = {task.status},updated_at = now(), finished_at = null, path_file = '{task.path_file}' WHERE id = '{id}'", con);
-                        cmd.ExecuteNonQuery();
-                        con.Close();
-                        NpgsqlConnection.ClearAllPools();
-                        return Ok(new { status = true });
-                    }
+                    
                 }
             }
             catch
